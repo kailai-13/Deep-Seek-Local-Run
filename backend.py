@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
 app = FastAPI()
@@ -17,46 +17,68 @@ app.add_middleware(
 # Model configuration
 MODEL_NAME = "Qwen/Qwen2.5-Math-7B"
 
-# Auto-detect device (GPU if available, otherwise CPU)
-device = "cuda" if torch.cuda.is_available() else "cpu"
+# Quantization configuration for 4-bit loading
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.float16,
+    bnb_4bit_use_double_quant=True,
+)
 
-# Load model and tokenizer with optimized settings
 try:
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-
+    
+    # Load model with 4-bit quantization
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        device_map="auto",   # Automatically allocate to CPU/GPU
-        torch_dtype=torch.float16,  # Reduce memory usage
-        low_cpu_mem_usage=True  # Optimize CPU memory usage
-    ).to(device)
+        quantization_config=bnb_config,
+        device_map="auto",  # Automatically handles GPU/CPU offloading
+        trust_remote_code=True
+    )
     
-    print("✅ Model loaded successfully!")
+    # For better memory management
+    model.config.use_cache = True
+    model.eval()
+    print("✅ Model loaded successfully with 4-bit quantization!")
 
 except Exception as e:
     print(f"❌ Error loading model: {e}")
+    raise
 
 # Define request model
 class PromptRequest(BaseModel):
     text: str
 
-# Generate response function
-def generate_response(prompt: str, max_new_tokens=500):
-    inputs = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).to(device)
+# Optimized generation function
+def generate_response(prompt: str, max_new_tokens=256):
+    try:
+        inputs = tokenizer(
+            prompt,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=512  # Limit input length
+        ).to(model.device)
+        
+        with torch.no_grad():
+            outputs = model.generate(
+                **inputs,
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                top_k=30,  # Reduced for memory savings
+                top_p=0.9,
+                temperature=0.7,
+                pad_token_id=tokenizer.eos_token_id,
+                repetition_penalty=1.1  # Prevent repetition
+            )
+        
+        return tokenizer.decode(outputs[0], skip_special_tokens=True)
     
-    with torch.no_grad():
-        outputs = model.generate(
-            inputs.input_ids,
-            attention_mask=inputs.attention_mask,  # ✅ Fix attention mask warning
-            max_new_tokens=max_new_tokens,  # ✅ Use max_new_tokens instead of max_length
-            do_sample=True,
-            top_k=50,
-            top_p=0.95,
-            temperature=0.7,
-            pad_token_id=tokenizer.eos_token_id  # ✅ Set pad_token_id
-        )
-
-    return tokenizer.decode(outputs[0], skip_special_tokens=True)
+    except RuntimeError as e:
+        if "CUDA out of memory" in str(e):
+            raise HTTPException(status_code=500, detail="CUDA out of memory - try shorter prompt")
+        raise
 
 # API Endpoint
 @app.post("/generate")

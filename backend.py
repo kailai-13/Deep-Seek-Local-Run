@@ -24,13 +24,13 @@ try:
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     
-    # Load model
+    # Load model with device_map="auto"
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         device_map="auto",  # Automatically handles GPU/CPU offloading
         torch_dtype=torch.float16 if device == "cuda" else torch.float32,
         low_cpu_mem_usage=True
-    ).to(device)
+    )
     
     print(f"✅ Model loaded successfully on {device}!")
 
@@ -51,7 +51,7 @@ def generate_response(prompt: str, max_new_tokens=256):
             padding=True,
             truncation=True,
             max_length=512  # Limit input length
-        ).to(device)
+        ).to(model.device)  # Use the model's device
         
         with torch.no_grad():
             outputs = model.generate(

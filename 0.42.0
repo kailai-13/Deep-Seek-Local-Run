@@ -1,0 +1,16 @@
+Collecting bitsandbytes
+  Using cached bitsandbytes-0.45.1-py3-none-win_amd64.whl.metadata (5.9 kB)
+Requirement already satisfied: torch~=2.0 in c:\users\kaila\deep-ai\lib\site-packages (from bitsandbytes) (2.6.0+cu118)
+Requirement already satisfied: numpy>=1.17 in c:\users\kaila\deep-ai\lib\site-packages (from bitsandbytes) (2.2.2)
+Requirement already satisfied: filelock in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (3.17.0)
+Requirement already satisfied: typing-extensions>=4.10.0 in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (4.12.2)
+Requirement already satisfied: networkx in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (3.4.2)
+Requirement already satisfied: jinja2 in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (3.1.5)
+Requirement already satisfied: fsspec in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (2025.2.0)
+Requirement already satisfied: setuptools in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (75.8.0)
+Requirement already satisfied: sympy==1.13.1 in c:\users\kaila\deep-ai\lib\site-packages (from torch~=2.0->bitsandbytes) (1.13.1)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\users\kaila\deep-ai\lib\site-packages (from sympy==1.13.1->torch~=2.0->bitsandbytes) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in c:\users\kaila\deep-ai\lib\site-packages (from jinja2->torch~=2.0->bitsandbytes) (3.0.2)
+Using cached bitsandbytes-0.45.1-py3-none-win_amd64.whl (69.1 MB)
+Installing collected packages: bitsandbytes
+Successfully installed bitsandbytes-0.45.1

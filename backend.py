@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import torch
 
 app = FastAPI()
@@ -15,32 +15,24 @@ app.add_middleware(
 )
 
 # Model configuration
-MODEL_NAME = "Qwen/Qwen2.5-Math-7B"
+MODEL_NAME = "Qwen/Qwen1.5-1.8B"  # Smaller model for GTX 1650
 
-# Quantization configuration for 4-bit loading
-bnb_config = BitsAndBytesConfig(
-    load_in_4bit=True,
-    bnb_4bit_quant_type="nf4",
-    bnb_4bit_compute_dtype=torch.float16,
-    bnb_4bit_use_double_quant=True,
-)
+# Auto-detect device (GPU if available, otherwise CPU)
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 try:
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     
-    # Load model with 4-bit quantization
+    # Load model
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
-        quantization_config=bnb_config,
         device_map="auto",  # Automatically handles GPU/CPU offloading
-        trust_remote_code=True
-    )
+        torch_dtype=torch.float16 if device == "cuda" else torch.float32,
+        low_cpu_mem_usage=True
+    ).to(device)
     
-    # For better memory management
-    model.config.use_cache = True
-    model.eval()
-    print("✅ Model loaded successfully with 4-bit quantization!")
+    print(f"✅ Model loaded successfully on {device}!")
 
 except Exception as e:
     print(f"❌ Error loading model: {e}")
@@ -59,7 +51,7 @@ def generate_response(prompt: str, max_new_tokens=256):
             padding=True,
             truncation=True,
             max_length=512  # Limit input length
-        ).to(model.device)
+        ).to(device)
         
         with torch.no_grad():
             outputs = model.generate(

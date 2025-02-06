@@ -29,7 +29,7 @@ try:
         device_map="auto",   # Automatically allocate to CPU/GPU
         torch_dtype=torch.float16,  # Reduce memory usage
         low_cpu_mem_usage=True  # Optimize CPU memory usage
-    )
+    ).to(device)
     
     print("✅ Model loaded successfully!")
 
